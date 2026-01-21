@@ -41,3 +41,7 @@ app-example
 # generated native folders
 /ios
 /android
+
+# GraphQL codegen
+graphql/schema.graphql
+graphql/types/*
