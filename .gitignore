@@ -44,4 +44,4 @@ app-example
 
 # GraphQL codegen
 graphql/schema.graphql
-graphql/types/*
+graphql/types
