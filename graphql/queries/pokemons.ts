@@ -1,4 +1,4 @@
-import { gql } from "../types";
+import { gql } from '../types';
 
 export const GET_POKEMONS = gql(`
   query getPokemons($limit: Int!) {

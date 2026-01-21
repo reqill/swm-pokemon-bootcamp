@@ -1,8 +1,8 @@
-import { FlatList, StyleSheet } from "react-native";
+import { FlatList, StyleSheet } from 'react-native';
 
-import { ThemedText } from "@/components/themed-text";
-import { GET_POKEMONS } from "@/graphql/queries/pokemons";
-import { useQuery } from "@apollo/client/react";
+import { ThemedText } from '@/components/themed-text';
+import { GET_POKEMONS } from '@/graphql/queries/pokemons';
+import { useQuery } from '@apollo/client/react';
 
 export default function TabTwoScreen() {
   const { loading, error, data } = useQuery(GET_POKEMONS, {
@@ -24,9 +24,7 @@ export default function TabTwoScreen() {
       ListHeaderComponent={
         <>
           {loading && <ThemedText>Loading Pokémons...</ThemedText>}
-          {error && (
-            <ThemedText>Error loading Pokémons: {error.message}</ThemedText>
-          )}
+          {error && <ThemedText>Error loading Pokémons: {error.message}</ThemedText>}
         </>
       }
     />
