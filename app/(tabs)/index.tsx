@@ -1,7 +1,9 @@
 import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useFavoritePokemon } from '@/context/favorite-pokemon-context';
 import { snakeCaseToTitleCase } from '@/lib/caseTransformers';
 import { Image } from 'expo-image';
@@ -27,62 +29,67 @@ export default function HomeScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Image style={styles.pokemonImage} source={sprite} />
-          <ThemedText style={styles.name}>{snakeCaseToTitleCase(favoritePokemon.name)}</ThemedText>
-          <TouchableOpacity
-            style={styles.unfavButton}
-            onPress={() => {
-              try {
-                setFavoritePokemon(null);
-              } catch (e) {
-                console.error('Failed to unfavorite', e);
-              }
-            }}
-          >
-            <ThemedText style={styles.unfavText}>No Longer My Favorite :c</ThemedText>
-          </TouchableOpacity>
-        </View>
+      <SafeAreaView edges={['top']} style={styles.safeArea}>
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          <View style={styles.header}>
+            <Image style={styles.pokemonImage} source={sprite} />
+            <ThemedText style={styles.name}>{snakeCaseToTitleCase(favoritePokemon.name)}</ThemedText>
+            <TouchableOpacity
+              style={styles.unfavButton}
+              accessibilityRole="button"
+              accessibilityLabel="Remove favorite"
+              onPress={() => {
+                try {
+                  setFavoritePokemon(null);
+                } catch (e) {
+                  console.error('Failed to unfavorite', e);
+                }
+              }}
+            >
+              <IconSymbol color="#ff3b30" name="trash" size={14} style={styles.unfavIcon} />
+              <ThemedText style={styles.unfavText}>Remove favorite</ThemedText>
+            </TouchableOpacity>
+          </View>
 
-        <View style={styles.card}>
-          <ThemedText style={styles.cardTitle}>Basics</ThemedText>
-          <View style={styles.row}>
-            <View style={styles.col}>
-              <ThemedText style={styles.label}>Height</ThemedText>
-              <ThemedText style={styles.value}>{favoritePokemon.height ?? '—'}</ThemedText>
-            </View>
-            <View style={styles.col}>
-              <ThemedText style={styles.label}>Weight</ThemedText>
-              <ThemedText style={styles.value}>{favoritePokemon.weight ?? '—'}</ThemedText>
-            </View>
-            <View style={styles.col}>
-              <ThemedText style={styles.label}>XP</ThemedText>
-              <ThemedText style={styles.value}>{favoritePokemon.base_experience ?? '—'}</ThemedText>
+          <View style={styles.card}>
+            <ThemedText style={styles.cardTitle}>Basics</ThemedText>
+            <View style={styles.row}>
+              <View style={styles.col}>
+                <ThemedText style={styles.label}>Height</ThemedText>
+                <ThemedText style={styles.value}>{favoritePokemon.height ?? '—'}</ThemedText>
+              </View>
+              <View style={styles.col}>
+                <ThemedText style={styles.label}>Weight</ThemedText>
+                <ThemedText style={styles.value}>{favoritePokemon.weight ?? '—'}</ThemedText>
+              </View>
+              <View style={styles.col}>
+                <ThemedText style={styles.label}>XP</ThemedText>
+                <ThemedText style={styles.value}>{favoritePokemon.base_experience ?? '—'}</ThemedText>
+              </View>
             </View>
           </View>
-        </View>
 
-        <View style={styles.card}>
-          <ThemedText style={styles.cardTitle}>Types</ThemedText>
-          <View style={styles.chipsRow}>
-            {(favoritePokemon.pokemontypes || []).map((t) => (
-              <View key={t?.type?.name} style={styles.chip}>
-                <ThemedText style={styles.chipText}>{t?.type?.name}</ThemedText>
-              </View>
+          <View style={styles.card}>
+            <ThemedText style={styles.cardTitle}>Types</ThemedText>
+            <View style={styles.chipsRow}>
+              {(favoritePokemon.pokemontypes || []).map((t) => (
+                <View key={t?.type?.name} style={styles.chip}>
+                  <ThemedText style={styles.chipText}>{t?.type?.name}</ThemedText>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.card}>
+            <ThemedText style={styles.cardTitle}>Abilities</ThemedText>
+            {(favoritePokemon.pokemonabilities || []).map((a) => (
+              <ThemedText key={a?.ability?.name} style={styles.listItem}>
+                • {snakeCaseToTitleCase(a?.ability?.name || '')}
+              </ThemedText>
             ))}
           </View>
-        </View>
-
-        <View style={styles.card}>
-          <ThemedText style={styles.cardTitle}>Abilities</ThemedText>
-          {(favoritePokemon.pokemonabilities || []).map((a) => (
-            <ThemedText key={a?.ability?.name} style={styles.listItem}>
-              • {snakeCaseToTitleCase(a?.ability?.name || '')}
-            </ThemedText>
-          ))}
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </SafeAreaView>
     </ThemedView>
   );
 }
@@ -126,7 +133,6 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
-    paddingTop: 50,
     paddingBottom: 40,
   },
   header: {
@@ -195,7 +201,11 @@ const styles = StyleSheet.create({
   },
   unfavButton: {
     marginTop: 10,
-    backgroundColor: '#ff6b6b22',
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ff3b30',
+    backgroundColor: 'transparent',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -203,5 +213,12 @@ const styles = StyleSheet.create({
   unfavText: {
     color: '#ff3b30',
     fontWeight: '700',
+    marginLeft: 6,
+  },
+  unfavIcon: {
+    marginLeft: 0,
+  },
+  safeArea: {
+    flex: 1,
   },
 });
