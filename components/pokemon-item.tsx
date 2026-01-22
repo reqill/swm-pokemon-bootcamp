@@ -1,6 +1,7 @@
 import { useFavoritePokemon } from '@/context/favorite-pokemon-context';
+import { usePokemonSheet } from '@/context/pokemon-sheet-context';
 import { GetPokemonsQuery } from '@/graphql/types/graphql';
-import { parsePokemonName } from '@/lib/pokemonNames';
+import { snakeCaseToTitleCase } from '@/lib/caseTransformers';
 import { Image } from 'expo-image';
 import { StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -18,8 +19,11 @@ const SWIPE_ACTION_TRIGGER_THRESHOLD = 80;
 const TIME_TO_ACTIVATE_PAN = 50; // ms
 const TOUCH_SLOP = 5; // px
 
-export default function PokemonItem({ id, name, pokemonsprites, index }: Props) {
+export default function PokemonItem({ index, ...pokemonInfo }: Props) {
+  const { id, name, pokemonsprites } = pokemonInfo;
   const { favoritePokemon, setFavoritePokemon } = useFavoritePokemon();
+  const { showPokemon } = usePokemonSheet();
+
   const isFavorite = favoritePokemon?.id === id;
   const translationX = useSharedValue(0);
   const touchStart = useSharedValue({ x: 0, y: 0, time: 0 });
@@ -36,7 +40,7 @@ export default function PokemonItem({ id, name, pokemonsprites, index }: Props) 
         await setFavoritePokemon(pokemon);
       }
     };
-    fn({ id, name, pokemonsprites });
+    fn(pokemonInfo);
   };
 
   const swipeLeftAction = () => {
@@ -44,9 +48,13 @@ export default function PokemonItem({ id, name, pokemonsprites, index }: Props) 
     scheduleOnRN(setFavoritePokemonSync);
   };
 
+  const showPokemonSync = () => {
+    showPokemon(pokemonInfo);
+  };
+
   const swipeRightAction = () => {
     'worklet';
-    console.log(`Swiped right on Pokémon ID: ${id}, Name: ${name}`);
+    scheduleOnRN(showPokemonSync);
   };
 
   const pan = Gesture.Pan()
@@ -112,7 +120,7 @@ export default function PokemonItem({ id, name, pokemonsprites, index }: Props) 
         <Animated.View style={[animatedStyles]}>
           <ThemedView style={styles.container}>
             <View style={styles.textContainer}>
-              <ThemedText style={styles.pokemonName}>{parsePokemonName(name)}</ThemedText>
+              <ThemedText style={styles.pokemonName}>{snakeCaseToTitleCase(name)}</ThemedText>
               <ThemedText style={styles.pokemonId}>ID: {id}</ThemedText>
             </View>
             {isFavorite && (

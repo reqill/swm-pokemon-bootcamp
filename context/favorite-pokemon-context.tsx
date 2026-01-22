@@ -1,29 +1,20 @@
-import { GET_POKEMON_DETAILS_BY_ID } from '@/graphql/queries/pokemons';
-import { GetPokemonDetailsByIdQuery } from '@/graphql/types/graphql';
-import { useQuery } from '@apollo/client/react';
+import { GetPokemonsQuery } from '@/graphql/types/graphql';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
 const FAVORITE_POKEMON_KEY = 'favoritePokemon';
 
-type PokemonType = GetPokemonDetailsByIdQuery['pokemon'][0];
+type PokemonType = GetPokemonsQuery['pokemons'][0];
 
 interface FavoritePokemonContextType {
   favoritePokemon: PokemonType | null;
-  setFavoritePokemon: (pokemon: Partial<PokemonType> | null) => Promise<void>;
+  setFavoritePokemon: (pokemon: PokemonType | null) => Promise<void>;
 }
 
 const FavoritePokemonContext = createContext<FavoritePokemonContextType | undefined>(undefined);
 
 export const FavoritePokemonProvider = ({ children }: { children: ReactNode }) => {
-  const [favoritePokemon, setFavoritePokemonState] = useState<Partial<PokemonType> | null>(null);
-
-  const { data } = useQuery(GET_POKEMON_DETAILS_BY_ID, {
-    skip: !favoritePokemon?.id,
-    variables: {
-      id: favoritePokemon?.id!,
-    },
-  });
+  const [favoritePokemonState, setFavoritePokemonState] = useState<PokemonType | null>(null);
 
   useEffect(() => {
     const loadFavorite = async () => {
@@ -39,7 +30,7 @@ export const FavoritePokemonProvider = ({ children }: { children: ReactNode }) =
     loadFavorite();
   }, []);
 
-  const setFavoritePokemon = async (pokemon: Partial<PokemonType> | null) => {
+  const setFavoritePokemon = async (pokemon: PokemonType | null) => {
     setFavoritePokemonState(pokemon);
     try {
       if (pokemon) {
@@ -53,7 +44,7 @@ export const FavoritePokemonProvider = ({ children }: { children: ReactNode }) =
   };
 
   return (
-    <FavoritePokemonContext.Provider value={{ favoritePokemon: data?.pokemon[0] ?? null, setFavoritePokemon }}>
+    <FavoritePokemonContext.Provider value={{ favoritePokemon: favoritePokemonState, setFavoritePokemon }}>
       {children}
     </FavoritePokemonContext.Provider>
   );

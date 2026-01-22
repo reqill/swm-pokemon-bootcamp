@@ -2,6 +2,7 @@ import { FlatList, StyleSheet, View } from 'react-native';
 
 import PokemonItem from '@/components/pokemon-item';
 import { ThemedText } from '@/components/themed-text';
+import { PokemonSheetProvider } from '@/context/pokemon-sheet-context';
 import { GET_NUMBER_OF_UNIQUE_POKEMONS, GET_POKEMONS } from '@/graphql/queries/pokemons';
 import { useQuery } from '@apollo/client/react';
 import { useCallback } from 'react';
@@ -30,25 +31,27 @@ export default function ExploreTab() {
   }, [loading, fetchMore, pokemons.length, totalPokemons]);
 
   return (
-    <FlatList
-      data={pokemons}
-      keyExtractor={(item) => item.id.toString()}
-      renderItem={({ item, index }) => <PokemonItem {...item} index={index} />}
-      onEndReachedThreshold={0.6}
-      onEndReached={loadMorePokemons}
-      style={styles.listContainer}
-      ItemSeparatorComponent={() => <View style={styles.separator} />}
-      ListHeaderComponent={<>{loading && pokemons.length === 0 && <ThemedText>Loading Pokémons...</ThemedText>}</>}
-      ListFooterComponent={
-        <>
-          {loading && pokemons.length !== 0 && <ThemedText>Loading more Pokémons...</ThemedText>}
-          {error && <ThemedText>Error loading Pokémons: {error.message}</ThemedText>}
-          {pokemons.length >= totalPokemons && !loadingTotalPokemons && (
-            <ThemedText>There are no more Pokémons to load :o</ThemedText>
-          )}
-        </>
-      }
-    />
+    <PokemonSheetProvider>
+      <FlatList
+        data={pokemons}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={({ item, index }) => <PokemonItem {...item} index={index} />}
+        onEndReachedThreshold={0.6}
+        onEndReached={loadMorePokemons}
+        style={styles.listContainer}
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        ListHeaderComponent={<>{loading && pokemons.length === 0 && <ThemedText>Loading Pokémons...</ThemedText>}</>}
+        ListFooterComponent={
+          <>
+            {loading && pokemons.length !== 0 && <ThemedText>Loading more Pokémons...</ThemedText>}
+            {error && <ThemedText>Error loading Pokémons: {error.message}</ThemedText>}
+            {pokemons.length >= totalPokemons && !loadingTotalPokemons && (
+              <ThemedText>There are no more Pokémons to load :o</ThemedText>
+            )}
+          </>
+        }
+      />
+    </PokemonSheetProvider>
   );
 }
 
