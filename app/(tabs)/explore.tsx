@@ -1,30 +1,51 @@
-import { FlatList, StyleSheet } from 'react-native';
+import { FlatList, StyleSheet, View } from 'react-native';
 
+import PokemonItem from '@/components/pokemon-item';
 import { ThemedText } from '@/components/themed-text';
-import { GET_POKEMONS } from '@/graphql/queries/pokemons';
+import { GET_NUMBER_OF_UNIQUE_POKEMONS, GET_POKEMONS } from '@/graphql/queries/pokemons';
 import { useQuery } from '@apollo/client/react';
+import { useCallback } from 'react';
+
+const PAGE_SIZE = 50;
 
 export default function TabTwoScreen() {
-  const { loading, error, data } = useQuery(GET_POKEMONS, {
+  const { data: numberOfUniquePokemons, loading: loadingTotalPokemons } = useQuery(GET_NUMBER_OF_UNIQUE_POKEMONS);
+  const { loading, error, data, fetchMore } = useQuery(GET_POKEMONS, {
     variables: {
-      limit: 100,
+      limit: PAGE_SIZE,
+      offset: 0,
     },
   });
 
+  const pokemons = data?.pokemons || [];
+  const totalPokemons = numberOfUniquePokemons?.pokemon_aggregate?.aggregate?.count || 0;
+
+  const loadMorePokemons = useCallback(() => {
+    if (loading || pokemons.length >= totalPokemons) return;
+    fetchMore({
+      variables: {
+        offset: pokemons.length,
+      },
+    });
+  }, [loading, fetchMore, pokemons.length, totalPokemons]);
+
   return (
     <FlatList
-      data={data?.pokemons || []}
+      data={pokemons}
       keyExtractor={(item) => item.id.toString()}
-      renderItem={({ item }) => (
-        <ThemedText>
-          {item.id}. {item.name}
-        </ThemedText>
-      )}
+      renderItem={({ item, index }) => <PokemonItem {...item} index={index} />}
+      onEndReachedThreshold={0.6}
+      onEndReached={loadMorePokemons}
       style={styles.listContainer}
-      ListHeaderComponent={
+      ItemSeparatorComponent={() => <View style={styles.separator} />}
+      ListHeaderComponent={<>{loading && pokemons.length === 0 && <ThemedText>Loading Pokémons...</ThemedText>}</>}
+      ListFooterComponent={
         <>
-          {loading && <ThemedText>Loading Pokémons...</ThemedText>}
+          {loading && pokemons.length !== 0 && <ThemedText>Loading more Pokémons...</ThemedText>}
           {error && <ThemedText>Error loading Pokémons: {error.message}</ThemedText>}
+          {pokemons.length >= totalPokemons && !loadingTotalPokemons && (
+            <ThemedText>There are no more Pokémons to load :o</ThemedText>
+          )}
         </>
       }
     />
@@ -36,4 +57,5 @@ const styles = StyleSheet.create({
     paddingTop: 64,
     padding: 16,
   },
+  separator: { height: 8 },
 });
