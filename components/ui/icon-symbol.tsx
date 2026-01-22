@@ -22,6 +22,8 @@ const MAPPING = {
   magnifyingglass: 'search',
   'camera.fill': 'camera-alt',
   'map.fill': 'map',
+  star: 'star-border',
+  'eye.fill': 'visibility',
 } as IconMapping;
 
 /**

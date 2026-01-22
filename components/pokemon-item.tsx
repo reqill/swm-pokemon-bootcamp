@@ -1,11 +1,14 @@
+import { useFavoritePokemon } from '@/context/favorite-pokemon-context';
 import { GetPokemonsQuery } from '@/graphql/types/graphql';
 import { parsePokemonName } from '@/lib/pokemonNames';
 import { Image } from 'expo-image';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
+import { IconSymbol } from './ui/icon-symbol';
 
 type Props = GetPokemonsQuery['pokemons'][number] & {
   index?: number;
@@ -16,6 +19,8 @@ const TIME_TO_ACTIVATE_PAN = 50; // ms
 const TOUCH_SLOP = 5; // px
 
 export default function PokemonItem({ id, name, pokemonsprites, index }: Props) {
+  const { favoritePokemon, setFavoritePokemon } = useFavoritePokemon();
+  const isFavorite = favoritePokemon?.id === id;
   const translationX = useSharedValue(0);
   const touchStart = useSharedValue({ x: 0, y: 0, time: 0 });
 
@@ -23,9 +28,20 @@ export default function PokemonItem({ id, name, pokemonsprites, index }: Props) 
     transform: [{ translateX: translationX.value }],
   }));
 
+  const setFavoritePokemonSync = () => {
+    const fn = async (pokemon: GetPokemonsQuery['pokemons'][number] | null) => {
+      if (isFavorite) {
+        await setFavoritePokemon(null);
+      } else {
+        await setFavoritePokemon(pokemon);
+      }
+    };
+    fn({ id, name, pokemonsprites });
+  };
+
   const swipeLeftAction = () => {
     'worklet';
-    console.log(`Swiped left on Pokémon ID: ${id}, Name: ${name}`);
+    scheduleOnRN(setFavoritePokemonSync);
   };
 
   const swipeRightAction = () => {
@@ -34,6 +50,7 @@ export default function PokemonItem({ id, name, pokemonsprites, index }: Props) 
   };
 
   const pan = Gesture.Pan()
+    // https://github.com/software-mansion/react-native-gesture-handler/issues/1933#issuecomment-1070586410
     .manualActivation(true)
     .onTouchesDown((e) => {
       touchStart.value = {
@@ -71,8 +88,6 @@ export default function PokemonItem({ id, name, pokemonsprites, index }: Props) 
       } else if (translationX.value >= SWIPE_ACTION_TRIGGER_THRESHOLD) {
         swipeRightAction();
       }
-
-      // return to the original position with a spring animation
       translationX.value = withSpring(0);
     });
 
@@ -82,14 +97,27 @@ export default function PokemonItem({ id, name, pokemonsprites, index }: Props) 
   return (
     <GestureDetector gesture={pan}>
       <View style={styles.underContainer}>
-        <View style={styles.swipeRightAction} />
-        <View style={styles.swipeLeftAction} />
+        <View style={styles.swipeRightAction}>
+          <View style={styles.detailsContainer}>
+            <IconSymbol color="rgb(255, 255, 255)" name="eye.fill" size={32} />
+            <Text style={styles.detailsText}>See details</Text>
+          </View>
+        </View>
+        <View style={styles.swipeLeftAction}>
+          <View style={styles.favoriteContainer}>
+            <IconSymbol color="rgb(255, 204, 0)" name={isFavorite ? 'star.fill' : 'star'} size={32} />
+            <Text style={styles.favoriteText}>{isFavorite ? 'Unfavorite' : 'Favorite'}</Text>
+          </View>
+        </View>
         <Animated.View style={[animatedStyles]}>
           <ThemedView style={styles.container}>
             <View style={styles.textContainer}>
               <ThemedText style={styles.pokemonName}>{parsePokemonName(name)}</ThemedText>
               <ThemedText style={styles.pokemonId}>ID: {id}</ThemedText>
             </View>
+            {isFavorite && (
+              <IconSymbol color="rgb(255, 204, 0)" name="star.fill" size={169} style={styles.favoriteIndicator} />
+            )}
             <Image source={pokemonSprite} style={styles.image} contentFit="contain" />
           </ThemedView>
         </Animated.View>
@@ -110,6 +138,18 @@ const styles = StyleSheet.create({
     width: '50%',
     backgroundColor: '#4CAF50',
     borderRadius: 8,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+  detailsContainer: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingLeft: 12,
+  },
+  detailsText: {
+    color: 'white',
+    fontSize: 14,
   },
   swipeLeftAction: {
     position: 'absolute',
@@ -117,8 +157,20 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: '50%',
-    backgroundColor: '#F44336',
+    backgroundColor: '#365cf4',
+    alignItems: 'flex-end',
+    justifyContent: 'center',
     borderRadius: 8,
+  },
+  favoriteContainer: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingRight: 12,
+  },
+  favoriteText: {
+    color: 'white',
+    fontSize: 14,
   },
   container: {
     borderRadius: 8,
@@ -127,6 +179,7 @@ const styles = StyleSheet.create({
     paddingLeft: 18,
     alignItems: 'center',
     justifyContent: 'space-between',
+    overflow: 'hidden',
   },
   image: {
     width: 96,
@@ -142,5 +195,10 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     flex: 1,
+  },
+  favoriteIndicator: {
+    position: 'absolute',
+    right: -24,
+    opacity: 0.33,
   },
 });
