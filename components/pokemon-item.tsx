@@ -4,9 +4,7 @@ import { GetPokemonsQuery } from '@/graphql/types/graphql';
 import { snakeCaseToTitleCase } from '@/lib/caseTransformers';
 import { Image } from 'expo-image';
 import { StyleSheet, Text, View } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-import { scheduleOnRN } from 'react-native-worklets';
+import SwipeableItem from './swipeable-item';
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
 import { IconSymbol } from './ui/icon-symbol';
@@ -15,22 +13,12 @@ type Props = GetPokemonsQuery['pokemons'][number] & {
   index?: number;
 };
 
-const SWIPE_ACTION_TRIGGER_THRESHOLD = 80;
-const TIME_TO_ACTIVATE_PAN = 50; // ms
-const TOUCH_SLOP = 5; // px
-
 export default function PokemonItem({ index, ...pokemonInfo }: Props) {
   const { id, name, pokemonsprites } = pokemonInfo;
   const { favoritePokemon, setFavoritePokemon } = useFavoritePokemon();
   const { showPokemon } = usePokemonSheet();
 
   const isFavorite = favoritePokemon?.id === id;
-  const translationX = useSharedValue(0);
-  const touchStart = useSharedValue({ x: 0, y: 0, time: 0 });
-
-  const animatedStyles = useAnimatedStyle(() => ({
-    transform: [{ translateX: translationX.value }],
-  }));
 
   const setFavoritePokemonSync = () => {
     const fn = async (pokemon: GetPokemonsQuery['pokemons'][number] | null) => {
@@ -43,94 +31,47 @@ export default function PokemonItem({ index, ...pokemonInfo }: Props) {
     fn(pokemonInfo);
   };
 
-  const swipeLeftAction = () => {
-    'worklet';
-    scheduleOnRN(setFavoritePokemonSync);
-  };
-
   const showPokemonSync = () => {
     showPokemon(pokemonInfo);
   };
 
-  const swipeRightAction = () => {
-    'worklet';
-    scheduleOnRN(showPokemonSync);
+  const handleSwipeLeft = () => {
+    setFavoritePokemonSync();
   };
 
-  const pan = Gesture.Pan()
-    // https://github.com/software-mansion/react-native-gesture-handler/issues/1933#issuecomment-1070586410
-    .manualActivation(true)
-    .onTouchesDown((e) => {
-      touchStart.value = {
-        x: e.changedTouches[0].x,
-        y: e.changedTouches[0].y,
-        time: Date.now(),
-      };
-    })
-    .onTouchesMove((e, state) => {
-      if (Date.now() - touchStart.value.time > TIME_TO_ACTIVATE_PAN) {
-        state.activate();
-      } else if (
-        Math.abs(touchStart.value.x - e.changedTouches[0].x) > TOUCH_SLOP ||
-        Math.abs(touchStart.value.y - e.changedTouches[0].y) > TOUCH_SLOP
-      ) {
-        state.fail();
-      }
-    })
-    .onUpdate((e) => {
-      if (e.translationX < -SWIPE_ACTION_TRIGGER_THRESHOLD) {
-        translationX.value = withSpring(
-          -SWIPE_ACTION_TRIGGER_THRESHOLD + (e.translationX + SWIPE_ACTION_TRIGGER_THRESHOLD) / 4
-        );
-      } else if (e.translationX > SWIPE_ACTION_TRIGGER_THRESHOLD) {
-        translationX.value = withSpring(
-          SWIPE_ACTION_TRIGGER_THRESHOLD + (e.translationX - SWIPE_ACTION_TRIGGER_THRESHOLD) / 4
-        );
-      } else {
-        translationX.value = withSpring(e.translationX);
-      }
-    })
-    .onEnd(() => {
-      if (translationX.value <= -SWIPE_ACTION_TRIGGER_THRESHOLD) {
-        swipeLeftAction();
-      } else if (translationX.value >= SWIPE_ACTION_TRIGGER_THRESHOLD) {
-        swipeRightAction();
-      }
-      translationX.value = withSpring(0);
-    });
+  const handleSwipeRight = () => {
+    showPokemonSync();
+  };
 
   const pokemonSprite = pokemonsprites?.[0]?.sprites?.['front_default'];
-  const isFirst = index === 0; // will be used to play animation only for the first item to indicate interactivity
 
   return (
-    <GestureDetector gesture={pan}>
-      <View style={styles.underContainer}>
-        <View style={styles.swipeRightAction}>
-          <View style={styles.detailsContainer}>
-            <IconSymbol color="rgb(255, 255, 255)" name="eye.fill" size={32} />
-            <Text style={styles.detailsText}>See details</Text>
-          </View>
+    <View style={styles.underContainer}>
+      <View style={styles.swipeRightAction}>
+        <View style={styles.detailsContainer}>
+          <IconSymbol color="rgb(255, 255, 255)" name="eye.fill" size={32} />
+          <Text style={styles.detailsText}>See details</Text>
         </View>
-        <View style={styles.swipeLeftAction}>
-          <View style={styles.favoriteContainer}>
-            <IconSymbol color="rgb(255, 204, 0)" name={isFavorite ? 'star.fill' : 'star'} size={32} />
-            <Text style={styles.favoriteText}>{isFavorite ? 'Unfavorite' : 'Favorite'}</Text>
-          </View>
-        </View>
-        <Animated.View style={[animatedStyles]}>
-          <ThemedView style={styles.container}>
-            <View style={styles.textContainer}>
-              <ThemedText style={styles.pokemonName}>{snakeCaseToTitleCase(name)}</ThemedText>
-              <ThemedText style={styles.pokemonId}>ID: {id}</ThemedText>
-            </View>
-            {isFavorite && (
-              <IconSymbol color="rgb(255, 204, 0)" name="star.fill" size={169} style={styles.favoriteIndicator} />
-            )}
-            <Image source={pokemonSprite} style={styles.image} contentFit="contain" />
-          </ThemedView>
-        </Animated.View>
       </View>
-    </GestureDetector>
+      <View style={styles.swipeLeftAction}>
+        <View style={styles.favoriteContainer}>
+          <IconSymbol color="rgb(255, 204, 0)" name={isFavorite ? 'star.fill' : 'star'} size={32} />
+          <Text style={styles.favoriteText}>{isFavorite ? 'Unfavorite' : 'Favorite'}</Text>
+        </View>
+      </View>
+      <SwipeableItem index={index} onSwipeLeft={handleSwipeLeft} onSwipeRight={handleSwipeRight}>
+        <ThemedView style={styles.container}>
+          <View style={styles.textContainer}>
+            <ThemedText style={styles.pokemonName}>{snakeCaseToTitleCase(name)}</ThemedText>
+            <ThemedText style={styles.pokemonId}>ID: {id}</ThemedText>
+          </View>
+          {isFavorite && (
+            <IconSymbol color="rgb(255, 204, 0)" name="star.fill" size={169} style={styles.favoriteIndicator} />
+          )}
+          <Image source={pokemonSprite} style={styles.image} contentFit="contain" />
+        </ThemedView>
+      </SwipeableItem>
+    </View>
   );
 }
 
