@@ -7,28 +7,6 @@ export const GET_POKEMONS = gql(`
     }}) {
       id
       name
-      pokemonsprites {
-        sprites 
-      }
-    }
-  }
-`);
-
-export const GET_NUMBER_OF_UNIQUE_POKEMONS = gql(`
-  query getNumberOfUniquePokemons {
-    pokemon_aggregate(where: { is_default: { _eq: true } }) {
-      aggregate {
-        count(distinct: true, columns: id)
-      }
-    }
-  }
-`);
-
-export const GET_POKEMON_DETAILS_BY_ID = gql(`
-  query getPokemonDetailsById($id: Int!) {
-    pokemon(where: { id: { _eq: $id } }) {
-      id
-      name
       height
       weight
       base_experience
@@ -44,6 +22,23 @@ export const GET_POKEMON_DETAILS_BY_ID = gql(`
         type {
           name
         }
+      }
+      pokemonstats {
+        base_stat
+        effort
+        stat {
+          name
+        }
+      }
+    }
+  }
+`);
+
+export const GET_NUMBER_OF_UNIQUE_POKEMONS = gql(`
+  query getNumberOfUniquePokemons {
+    pokemon_aggregate(where: { is_default: { _eq: true } }) {
+      aggregate {
+        count(distinct: true, columns: id)
       }
     }
   }
