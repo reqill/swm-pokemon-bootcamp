@@ -8,14 +8,14 @@ import { useCallback } from 'react';
 
 const PAGE_SIZE = 50;
 
-export default function TabTwoScreen() {
-  const { data: numberOfUniquePokemons, loading: loadingTotalPokemons } = useQuery(GET_NUMBER_OF_UNIQUE_POKEMONS);
+export default function ExploreTab() {
   const { loading, error, data, fetchMore } = useQuery(GET_POKEMONS, {
     variables: {
       limit: PAGE_SIZE,
       offset: 0,
     },
   });
+  const { data: numberOfUniquePokemons, loading: loadingTotalPokemons } = useQuery(GET_NUMBER_OF_UNIQUE_POKEMONS);
 
   const pokemons = data?.pokemons || [];
   const totalPokemons = numberOfUniquePokemons?.pokemon_aggregate?.aggregate?.count || 0;
