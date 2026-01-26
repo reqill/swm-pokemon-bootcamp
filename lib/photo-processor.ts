@@ -3,6 +3,8 @@ import { File, Paths } from 'expo-file-system';
 import * as Location from 'expo-location';
 import * as MediaLibrary from 'expo-media-library';
 
+import { embedGPSIntoJpeg } from './exif-utils';
+
 export type FaceData = {
   bounds: { x: number; y: number; width: number; height: number };
   rollAngle: number;
@@ -36,7 +38,8 @@ async function compositeImage(
   faceData: FaceData,
   pokemonSpriteUrl: string,
   windowWidth: number,
-  windowHeight: number
+  windowHeight: number,
+  location: Location.LocationObject | null
 ): Promise<string | null> {
   const photoData = await Skia.Data.fromURI(photoPath);
   const photoImage = Skia.Image.MakeImageFromEncoded(photoData);
@@ -89,8 +92,12 @@ async function compositeImage(
   canvas.restore();
 
   const compositeImg = surface.makeImageSnapshot();
-  const compositeData = compositeImg.encodeToBase64();
+  let compositeData = compositeImg.encodeToBase64();
   if (!compositeData) return null;
+
+  if (location) {
+    compositeData = embedGPSIntoJpeg(compositeData, location);
+  }
 
   const tempFile = new File(Paths.cache, `pokemon_photo_${Date.now()}.jpg`);
   const binaryString = atob(compositeData);
@@ -121,7 +128,8 @@ export async function processPhoto(params: PhotoProcessingParams): Promise<Proce
         faceData,
         pokemonSpriteUrl,
         windowWidth,
-        windowHeight
+        windowHeight,
+        location
       );
 
       if (compositeUri) {
@@ -134,6 +142,7 @@ export async function processPhoto(params: PhotoProcessingParams): Promise<Proce
   }
 
   const asset = await MediaLibrary.createAssetAsync(finalPhotoUri);
+  console.log('Photo saved to gallery:', asset.uri, location ? 'with GPS' : 'without GPS');
 
   return {
     success: true,
