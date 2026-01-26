@@ -1,70 +1,127 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useFavoritePokemon } from '@/context/favorite-pokemon-context';
 import { useIsFocused } from '@react-navigation/native';
-import { useEffect, useRef } from 'react';
-import { Dimensions, StyleSheet } from 'react-native';
-import { Camera, useCameraDevice, useCameraPermission, useFrameProcessor } from 'react-native-vision-camera';
-import { FrameFaceDetectionOptions, useFaceDetector } from 'react-native-vision-camera-face-detector';
+import { Image } from 'expo-image';
+import { useRef } from 'react';
+import { StyleSheet, useWindowDimensions } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
+import { useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
+import { Camera, Face, FrameFaceDetectionOptions } from 'react-native-vision-camera-face-detector';
+
+const AnimatedImage = Animated.createAnimatedComponent(Image);
 
 export default function CameraScreen() {
   const isFocused = useIsFocused();
   const { hasPermission, requestPermission } = useCameraPermission();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const { favoritePokemon } = useFavoritePokemon();
+  const device = useCameraDevice('front');
+
+  const face = useSharedValue<Pick<Face, 'bounds' | 'rollAngle' | 'yawAngle' | 'pitchAngle'>>({
+    bounds: { height: 0, width: 0, x: 0, y: 0 },
+    rollAngle: 0,
+    yawAngle: 0,
+    pitchAngle: 0,
+  });
 
   const faceDetectionOptions = useRef<FrameFaceDetectionOptions>({
-    autoMode: true,
-    classificationMode: 'none',
-    windowHeight: Dimensions.get('window').height,
-    windowWidth: Dimensions.get('window').width,
     performanceMode: 'fast',
+    classificationMode: 'none',
     landmarkMode: 'none',
+    contourMode: 'none',
+    trackingEnabled: true,
+    windowWidth,
+    windowHeight,
+    cameraFacing: 'front',
+    autoMode: true,
   }).current;
 
-  const device = useCameraDevice('front');
-  const { detectFaces, stopListeners } = useFaceDetector(faceDetectionOptions);
+  const handleFacesDetection = (faces: Face[]) => {
+    if (faces?.length > 0) {
+      const firstDetectedFace = faces[0];
+      const { width, height, x, y } = firstDetectedFace.bounds;
 
-  useEffect(() => {
-    return () => stopListeners();
-  }, []);
+      const foreheadSize = Math.min(width, height) * 0.8;
+      const foreheadX = x + (width - foreheadSize) / 2;
+      const foreheadY = y - foreheadSize * 0.3;
 
-  useEffect(() => {
-    if (isFocused && !hasPermission) requestPermission();
-  }, [hasPermission, requestPermission, isFocused]);
+      const mirroredRoll = -firstDetectedFace.rollAngle!;
+      const mirroredYaw = -firstDetectedFace.yawAngle!;
 
-  const frameProcessor = useFrameProcessor((frame) => {
-    'worklet';
-
-    const faces = detectFaces(frame);
-
-    if (faces.length > 0) {
-      console.log(`Detected ${JSON.stringify(faces)}`);
+      face.value = {
+        bounds: {
+          height: foreheadSize,
+          width: foreheadSize,
+          x: foreheadX,
+          y: foreheadY,
+        },
+        rollAngle: mirroredRoll ?? 0,
+        yawAngle: mirroredYaw ?? 0,
+        pitchAngle: firstDetectedFace.pitchAngle ?? 0,
+      };
+    } else {
+      face.value = {
+        bounds: { height: 0, width: 0, x: 0, y: 0 },
+        rollAngle: 0,
+        yawAngle: 0,
+        pitchAngle: 0,
+      };
     }
-  }, []);
+  };
+
+  const faceBoxStyles = useAnimatedStyle(() => ({
+    width: face.value.bounds.width,
+    height: face.value.bounds.height,
+    left: face.value.bounds.x,
+    top: face.value.bounds.y,
+    transform: [
+      { rotateZ: `${-face.value.rollAngle}deg` },
+      {
+        rotateY: `${face.value.yawAngle}deg`,
+      },
+      {
+        rotateX: `${face.value.pitchAngle}deg`,
+      },
+    ],
+  }));
 
   if (!device || !hasPermission) {
     return (
-      <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ThemedText>Requesting Camera Access...</ThemedText>
+      <ThemedView style={styles.centered}>
+        <ThemedText>To use this feature, please grant camera access.</ThemedText>
+        <ThemedText onPress={requestPermission} style={{ marginTop: 16, color: 'blue' }}>
+          Grant Camera Permission
+        </ThemedText>
       </ThemedView>
     );
   }
 
   return (
-    <Camera
-      style={StyleSheet.absoluteFill}
-      device={device}
-      isActive={isFocused}
-      frameProcessor={frameProcessor}
-      pixelFormat="yuv"
-    />
+    <ThemedView style={StyleSheet.absoluteFill}>
+      <Camera
+        style={StyleSheet.absoluteFill}
+        device={device}
+        isActive={isFocused}
+        faceDetectionCallback={handleFacesDetection}
+        faceDetectionOptions={faceDetectionOptions}
+      />
+      <AnimatedImage
+        source={favoritePokemon?.pokemonsprites?.[0]?.sprites?.['front_default'] || ''}
+        style={[styles.image, faceBoxStyles]}
+        contentFit="contain"
+      />
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  pokemonSprite: {
+  image: {
     position: 'absolute',
-    width: 100,
-    height: 100,
-    top: 0,
-    left: 0,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
