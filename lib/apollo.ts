@@ -7,7 +7,7 @@ const cache = new InMemoryCache({
     Query: {
       fields: {
         pokemon: {
-          keyArgs: false,
+          keyArgs: ['limit', 'offset', 'where'],
           // https://www.apollographql.com/docs/react/caching/cache-field-behavior#handling-pagination
           merge(existing: any[] | undefined, incoming: any[], { variables }) {
             if (variables == null || variables.offset == null || variables.limit == null) {
