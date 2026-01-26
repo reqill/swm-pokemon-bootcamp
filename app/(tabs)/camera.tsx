@@ -1,24 +1,38 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useFavoritePokemon } from '@/context/favorite-pokemon-context';
+import { useLocationPrefetch } from '@/hooks/use-location-prefetch';
+import { type FaceData, type PhotoProcessingParams, processPhoto } from '@/lib/photo-processor';
 import { useIsFocused } from '@react-navigation/native';
 import { Image } from 'expo-image';
-import { useRef } from 'react';
-import { StyleSheet, useWindowDimensions } from 'react-native';
+import * as MediaLibrary from 'expo-media-library';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, StyleSheet, TouchableOpacity, useWindowDimensions } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
-import { useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
+import { useCameraDevice, useCameraPermission, Camera as VisionCamera } from 'react-native-vision-camera';
 import { Camera, Face, FrameFaceDetectionOptions } from 'react-native-vision-camera-face-detector';
 
 const AnimatedImage = Animated.createAnimatedComponent(Image);
 
 export default function CameraScreen() {
+  const camera = useRef<VisionCamera>(null);
   const isFocused = useIsFocused();
-  const { hasPermission, requestPermission } = useCameraPermission();
+  const { hasPermission: hasCameraPermission, requestPermission: requestCameraPermission } = useCameraPermission();
+  const [mediaLibraryPermission, requestMediaLibraryPermission] = MediaLibrary.usePermissions();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const { favoritePokemon } = useFavoritePokemon();
   const device = useCameraDevice('front');
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const face = useSharedValue<Pick<Face, 'bounds' | 'rollAngle' | 'yawAngle' | 'pitchAngle'>>({
+  const { getLocation } = useLocationPrefetch({ enabled: isFocused });
+
+  useEffect(() => {
+    if (!mediaLibraryPermission?.granted) {
+      requestMediaLibraryPermission();
+    }
+  }, [mediaLibraryPermission, requestMediaLibraryPermission]);
+
+  const face = useSharedValue<FaceData>({
     bounds: { height: 0, width: 0, x: 0, y: 0 },
     rollAngle: 0,
     yawAngle: 0,
@@ -86,11 +100,56 @@ export default function CameraScreen() {
     ],
   }));
 
-  if (!device || !hasPermission) {
+  const takePhoto = useCallback(async () => {
+    if (!camera.current || isProcessing) return;
+
+    try {
+      setIsProcessing(true);
+
+      const capturedFaceData = face.value ?? {
+        bounds: { height: 0, width: 0, x: 0, y: 0 },
+        rollAngle: 0,
+        yawAngle: 0,
+        pitchAngle: 0,
+      };
+
+      const photo = await camera.current.takePhoto({ flash: 'off' });
+      const photoPath = `file://${photo.path}`;
+
+      const location = getLocation();
+      const pokemonSpriteUrl = favoritePokemon?.pokemonsprites?.[0]?.sprites?.['front_default'] ?? null;
+
+      if (!mediaLibraryPermission?.granted) {
+        Alert.alert('Permission required', 'Please grant media library access to save photos.');
+        setIsProcessing(false);
+        return;
+      }
+
+      const params: PhotoProcessingParams = {
+        photoPath,
+        photoWidth: photo.width,
+        photoHeight: photo.height,
+        faceData: capturedFaceData,
+        location,
+        pokemonSpriteUrl,
+        windowWidth,
+        windowHeight,
+      };
+
+      await processPhoto(params);
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert('Error', 'Failed to take photo. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [getLocation, mediaLibraryPermission, favoritePokemon, windowWidth, windowHeight, isProcessing]);
+
+  if (!device || !hasCameraPermission) {
     return (
       <ThemedView style={styles.centered}>
         <ThemedText>To use this feature, please grant camera access.</ThemedText>
-        <ThemedText onPress={requestPermission} style={{ marginTop: 16, color: 'blue' }}>
+        <ThemedText onPress={requestCameraPermission} style={{ marginTop: 16, color: 'blue' }}>
           Grant Camera Permission
         </ThemedText>
       </ThemedView>
@@ -100,22 +159,45 @@ export default function CameraScreen() {
   return (
     <ThemedView style={StyleSheet.absoluteFill}>
       <Camera
+        ref={camera}
         style={StyleSheet.absoluteFill}
         device={device}
         isActive={isFocused}
         faceDetectionCallback={handleFacesDetection}
         faceDetectionOptions={faceDetectionOptions}
+        photo
       />
       <AnimatedImage
         source={favoritePokemon?.pokemonsprites?.[0]?.sprites?.['front_default'] || ''}
         style={[styles.image, faceBoxStyles]}
         contentFit="contain"
       />
+      {isProcessing && <Animated.View style={styles.grayOutArea} />}
+      <TouchableOpacity style={styles.shutterButton} onPress={takePhoto} disabled={isProcessing}>
+        {isProcessing && <ActivityIndicator size="large" color="gray" />}
+      </TouchableOpacity>
     </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
+  grayOutArea: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  shutterButton: {
+    position: 'absolute',
+    bottom: 40,
+    alignSelf: 'center',
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: 'white',
+    borderWidth: 5,
+    borderColor: 'gray',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   image: {
     position: 'absolute',
   },
