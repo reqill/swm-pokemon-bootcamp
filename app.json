@@ -10,9 +10,17 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.swm-pokemon-bootcamp"
+      "bundleIdentifier": "com.anonymous.swm-pokemon-bootcamp",
+      "config": {
+        "googleMapsApiKey": "process.env.GOOGLE_API_KEY"
+      }
     },
     "android": {
+      "config": {
+        "googleMaps": {
+          "apiKey": "process.env.GOOGLE_API_KEY"
+        }
+      },
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

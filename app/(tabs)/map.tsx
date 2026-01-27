@@ -1,30 +1,71 @@
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
+import { PhotoPinMarker, Pin, SimplePinMarker } from '@/components/map';
 import { ThemedView } from '@/components/themed-view';
-import { Fonts } from '@/constants/theme';
-import { StyleSheet } from 'react-native';
+import { CRACOW_REGION, MOCK_PHOTO_PINS, PhotoPin } from '@/lib/mock-photo-pins';
+import { useCallback, useState } from 'react';
+import { Alert, StyleSheet } from 'react-native';
+import MapView, { LongPressEvent } from 'react-native-maps';
 
 export default function MapScreen() {
+  const [pins, setPins] = useState<Pin[]>([]);
+  const [photoPins, setPhotoPins] = useState<PhotoPin[]>(MOCK_PHOTO_PINS);
+
+  const handleLongPress = useCallback((event: LongPressEvent) => {
+    const { coordinate } = event.nativeEvent;
+    const newPin: Pin = {
+      id: Date.now().toString(),
+      coordinate,
+    };
+    setPins((currentPins) => [...currentPins, newPin]);
+  }, []);
+
+  const handleDeletePin = useCallback((pinId: string) => {
+    Alert.alert('Delete Pin', 'Are you sure you want to delete this pin?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          setPins((currentPins) => currentPins.filter((pin) => pin.id !== pinId));
+        },
+      },
+    ]);
+  }, []);
+
+  const handleDeletePhotoPin = useCallback((pinId: string) => {
+    Alert.alert('Delete Photo Pin', 'Are you sure you want to delete this photo pin?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          setPhotoPins((currentPins) => currentPins.filter((pin) => pin.id !== pinId));
+        },
+      },
+    ]);
+  }, []);
+
   return (
-    <ParallaxScrollView headerBackgroundColor={{ light: '#aadca1', dark: '#22471d' }} headerImage={<></>}>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText
-          type="title"
-          style={{
-            fontFamily: Fonts.rounded,
-          }}
-        >
-          Map
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <ThemedView style={styles.container}>
+      <MapView style={styles.map} onLongPress={handleLongPress} initialRegion={CRACOW_REGION}>
+        {pins.map((pin) => (
+          <SimplePinMarker key={pin.id} pin={pin} onPress={handleDeletePin} />
+        ))}
+        {photoPins.map((photoPin) => (
+          <PhotoPinMarker key={photoPin.id} pin={photoPin} onDelete={handleDeletePhotoPin} />
+        ))}
+      </MapView>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
+  container: {
+    flex: 1,
+    justifyContent: 'flex-end',
     alignItems: 'center',
-    gap: 8,
+  },
+  map: {
+    width: '100%',
+    height: '100%',
   },
 });
