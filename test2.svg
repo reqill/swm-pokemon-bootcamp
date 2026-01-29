@@ -1,0 +1,67 @@
+<svg width="100%" height="100%" viewBox="0 0 800 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      /* =========================================
+         1. BASE STYLES (Light Mode + Wide)
+         ========================================= */
+      .container { 
+        fill: #f0f0f0; /* Light gray background */
+        stroke: #333; 
+        stroke-width: 2;
+      }
+      .text { 
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        fill: #333333; /* Dark text */
+        font-weight: bold;
+      }
+      .icon { fill: #333333; }
+      
+      /* Toggle visibility classes */
+      .narrow-content { display: none; }
+      .wide-content { display: block; }
+
+      /* =========================================
+         2. DARK MODE OVERRIDES
+         Triggers if user's OS/Browser is Dark
+         ========================================= */
+      @media (prefers-color-scheme: dark) {
+        .container { 
+          fill: #0d1117; /* GitHub Dark Dimmed bg */
+          stroke: #c9d1d9; 
+        }
+        .text { fill: #c9d1d9; /* Light text */ }
+        .icon { fill: #c9d1d9; }
+      }
+
+      /* =========================================
+         3. WIDTH RESPONSIVENESS
+         Triggers if the image container < 500px
+         ========================================= */
+      @media (max-width: 500px) {
+        .wide-content { display: none; }
+        .narrow-content { display: block; }
+      }
+    </style>
+  </defs>
+
+  <rect x="2" y="2" width="796" height="196" rx="10" class="container" />
+
+  <g class="wide-content">
+    <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="30" class="text">
+      🖥️ Wide Layout (Desktop)
+    </text>
+    <text x="50%" y="70%" dominant-baseline="middle" text-anchor="middle" font-size="14" class="text" opacity="0.8">
+      (Try resizing your window)
+    </text>
+  </g>
+
+  <g class="narrow-content">
+    <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="30" class="text">
+      📱 Narrow Layout
+    </text>
+  </g>
+
+  <circle cx="50" cy="50" r="10" class="icon" opacity="0.5" />
+  <text x="70" y="55" font-size="12" class="text">Theme Check</text>
+
+</svg>
