@@ -24,6 +24,7 @@ const MAPPING = {
   'map.fill': 'map',
   star: 'star-border',
   'eye.fill': 'visibility',
+  'testtube.2': 'science',
 } as IconMapping;
 
 /**
