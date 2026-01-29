@@ -1,0 +1,29 @@
+<svg width="100%" height="100%" viewBox="0 0 500 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      /* Default state (Desktop/Wide) */
+      .small-view { display: none; }
+      .large-view { display: block; }
+
+      /* When the image is displayed smaller than 300px */
+      @media (max-width: 300px) {
+        .small-view { display: block; }
+        .large-view { display: none; }
+      }
+    </style>
+  </defs>
+
+  <g class="large-view">
+    <rect width="500" height="200" fill="#4CAF50" />
+    <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="white" font-size="24">
+      Wide Version
+    </text>
+  </g>
+
+  <g class="small-view">
+    <rect width="500" height="200" fill="#2196F3" />
+    <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="white" font-size="24">
+      Small Version
+    </text>
+  </g>
+</svg>
