@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Button, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -6,12 +6,23 @@ import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useFavoritePokemon } from '@/context/favorite-pokemon-context';
 import { snakeCaseToTitleCase } from '@/lib/caseTransformers';
+import * as Settings from '@/modules/my-module/src';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 
 export default function HomeScreen() {
   const { favoritePokemon, setFavoritePokemon } = useFavoritePokemon();
   const router = useRouter();
+  const [theme, setTheme] = useState<string>(Settings.getResolvedTheme());
+
+  useEffect(() => {
+    const subscription = Settings.addThemeListener(({ theme: newTheme }) => {
+      setTheme(newTheme);
+    });
+
+    return () => subscription.remove();
+  }, [setTheme]);
 
   if (!favoritePokemon) {
     return (
@@ -31,6 +42,12 @@ export default function HomeScreen() {
     <ThemedView style={styles.container}>
       <SafeAreaView edges={['top']} style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          <View>
+            <ThemedText>Theme: {theme}</ThemedText>
+            <Button title={`Set theme to light`} onPress={() => Settings.setTheme('light')} />
+            <Button title={`Set theme to dark`} onPress={() => Settings.setTheme('dark')} />
+            <Button title={`Set theme to system`} onPress={() => Settings.setTheme('system')} />
+          </View>
           <View style={styles.header}>
             <Image style={styles.pokemonImage} source={sprite} />
             <ThemedText style={styles.name}>{snakeCaseToTitleCase(favoritePokemon.name)}</ThemedText>
